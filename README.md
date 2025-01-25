@@ -27,3 +27,6 @@ I have experentmented with all 3 of these wireless systems but I've stuggled wit
 - Updates
 - Reboots
 
+# Prototype setup
+
+![alt text](/prototype.jpg)
