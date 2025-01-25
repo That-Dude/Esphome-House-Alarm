@@ -6,15 +6,15 @@ I live in a property with 4 well spaced out buildings that I would like to prote
 
 My goal is to build an alarm system for each building around the following objectives:
 
-- An ESP32 and Esphome at the heart
-- Off the shelf parts
-- Inexpensive to build
-- Easy to extend
-- Easy to program
-- Works independanly (Home Assistant not required)
-- Has full integration with Home Assistant over WiFi or Ethernet
-- Fully wired
-- Battery backup
+- [x] Built around the well supported ESP32 and Esphome
+- [x] Off the shelf parts
+- [x] Inexpensive to build
+- [x] Easy to extend
+- [x] Easy to program (Esphome)
+- [x] Works independanly but can also be integrated with Home Assistant
+- [x] Fully wired
+- [ ] Battery backup - I'm not sure how to apprach this atm
+- [ ] Ethernet with PoE -Take advancte of the UPS on my network switch and reliabilty of Ethernet over WiFi
 
 ## Why not use WiFi / Zigbee / Z-Wave sensors?
 
