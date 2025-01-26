@@ -33,3 +33,18 @@ I have experentmented with all 3 of these wireless systems but I've stuggled wit
 
 ![alt text](/prototype.jpg)
 
+Bill of Materials (prototype) all parts from AliExpress:
+
+- Esp32Wroom £2.30
+- Mains to 12vdc 1A trasformer (LED driver) £1.71
+- 12vdc PIR Motion Sensor Wired Alarm Dual Infrared Detector Pet Immune (2 pack) £10.13
+- Magnetic door sensor (10 pack) £11.19
+- 12vdc Flashing Siren, extremely loud £2.65
+- RDM6300 NFC reader 125Khz RFID tag reader £1.52
+- RFID tags (10 pack) £2.17
+- DC-DC Buck Power Supply Module (12v to 5v) £0.62 (I'm using something similar that I had laying around)
+- Wago 5 way connectors £0.9 each
+
+Total build cost for Prototype: £32.47 or $40.54 if that's your thing :-)
+
+You could make this cheaper, I've opted for PIR sensors with pet avoidance which cost £5.06 each, I saw PIR's for less than £1.00 that would probabply work in a pinch.
