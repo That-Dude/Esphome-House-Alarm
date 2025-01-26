@@ -60,4 +60,182 @@ You could make this cheaper, I've opted for PIR sensors with pet avoidance which
 
 NB: You can also buy a fully working alarm kit from AliExpress for a lower cost, which is way easier! But I wanted the niceties of an open source system with bespoke parts to suit my needs. Plus the fun of developing it myself.
 
+#Esphome code
 
+````
+esphome:
+  name: "house-alarm"
+  friendly_name: "house-alarm"
+
+############ Boiler plate ############
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+  level: debug
+
+# Enable Web.
+web_server:
+  port: 80
+  include_internal: true
+  local: true  
+  auth:
+    username: admin
+    password: !secret web_server_password
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: !secret alarm_api_key
+  reboot_timeout: 0s
+
+ota:
+  - platform: esphome
+    password: !secret alarm_ota_key
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  reboot_timeout: 0s
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Siren Fallback Hotspot"
+    password: !secret alarm_fallback_hotspot_pass
+
+captive_portal:
+
+############ Siren ############
+# alarm siren is on pin 23. We activate the mosfet gate allowing 12v to pass
+# A relay or trasister would do this just fine, I just had a mosfet module to hand
+output:
+  - platform: gpio
+    pin: GPIO23
+    id: "out_1"
+light:
+  - platform: binary
+    name: Siren
+    id: siren
+    output: out_1
+
+# This switch tracks the state of the alarm, and can be used to manually activate it
+switch:
+  - platform: template
+    name: "Alarm state"
+    id: alarm_state
+    optimistic: true
+    lambda: return id(alarm_state).state;
+
+button:
+  # We want the sirent to 'chirp' X times when the RFID is used to activate it
+  # Note; I plan to change this to a small piezo buzzer as the alarm is too loud
+  # for general notifications
+  - platform: template
+    id: "AlarmGracePeriod"
+    name: "Alarm Grace Period"
+    on_press:
+      - repeat:
+          count: 2
+          then:
+            - output.turn_on: out_1
+            - delay: "100ms"
+            - output.turn_off: out_1
+            - delay: "300ms"
+
+  # Trigger the alarm. This is the full blown alarm sound, default 60 seconds
+  - platform: template
+    id: "AlarmTriggered"
+    name: "Alarm Triggered"
+    on_press:
+      - repeat:
+          count: 1
+          then:
+            - output.turn_on: out_1
+            - delay: "60s"
+            - output.turn_off: out_1
+
+# Setup the UART for the RDM6300 RFID reader
+uart:
+  rx_pin: GPIO13
+  baud_rate: 9600
+
+# Enable the RFID reader
+rdm6300:
+
+binary_sensor:
+# PIR's trgger pins connected directly to GPIO4
+# this requires the esp32 internal pullup resister to be disabled
+  - platform: gpio
+    id: PIR01
+    name: "PIR 01"
+    device_class: motion
+    filters:
+      - delayed_off: 1000ms # the PIR sends a lot of activation traffic, this debouces it a single trigger
+    pin:  
+        number: GPIO4
+        mode:
+            input: true
+    on_press:
+      then:
+        - if:
+            condition:
+               switch.is_on: alarm_state
+            then:
+              - button.press: AlarmTriggered
+
+# Magnetic door sensor
+  - platform: gpio
+    id: MAGNET01
+    name: "Door 01"
+    device_class: door
+    pin:  
+        number: GPIO22
+        mode:
+            input: true
+            pullup: true
+        inverted: true
+    on_press:
+      then:
+        - if:
+            condition:
+               switch.is_on: alarm_state
+            then:
+              - button.press: AlarmTriggered
+
+# NFC tags arming and disarming the alarm
+  - platform: rdm6300
+    uid: !secret red_nfc_tag
+    name: "NFC tag: RED"
+    device_class: presence
+    filters: # the NFC reader sends a lot of activation traffic, this debouces it a single activation
+      - delayed_off: 500ms
+    on_press:
+      then:
+      - button.press: AlarmGracePeriod
+      - switch.toggle: alarm_state
+
+  - platform: rdm6300
+    uid: !secret blue_nfc_tag
+    name: "NFC tag: BLUE"
+    device_class: presence
+    filters: # the NFC reader sends a lot of activation traffic, this debouces it a single activation
+      - delayed_off: 500ms
+    on_press:
+      then:
+      - button.press: AlarmGracePeriod
+      - switch.toggle: alarm_state
+
+  - platform: rdm6300
+    uid: !secret green_nfc_tag
+    name: "NFC tag: GREEN"
+    device_class: presence
+    filters: # the NFC reader sends a lot of activation traffic, this debouces it a single activation
+      - delayed_off: 500ms
+    on_press:
+      then:
+      - button.press: AlarmGracePeriod
+      - switch.toggle: alarm_state
+````
