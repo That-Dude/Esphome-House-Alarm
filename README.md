@@ -36,7 +36,7 @@ I have experimented with all 3 of these wireless systems but I've struggled with
 
 # Prototype setup
 
-![alt text](/prototype.jpg)
+![Ptototype image](/prototype.jpg)
 
 The first step was to put together a working prototype. After lots of trial and error these are the components that worked for me.
 
@@ -60,9 +60,9 @@ You could make this cheaper, I've opted for PIR sensors with pet avoidance which
 
 NB: You can also buy a fully working alarm kit from AliExpress for a lower cost, which is way easier! But I wanted the niceties of an open source system with bespoke parts to suit my needs. Plus the fun of developing it myself.
 
-#Esphome code
+# Esphome code
 
-````
+````yaml
 esphome:
   name: "house-alarm"
   friendly_name: "house-alarm"
