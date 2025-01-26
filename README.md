@@ -8,10 +8,12 @@ My goal is to build an alarm system for each building around the following objec
 
 - [x] Built around the well supported ESP32 and Esphome
 - [x] Off the shelf parts
+- [ ] Supports multiple wired PIR sensros and magnetic doors sensors
+- [ ] Supports NFC tags to arm and disarm
 - [x] Inexpensive to build
 - [x] Easy to extend
 - [x] Easy to program (Esphome)
-- [x] Works independanly but can also be integrated with Home Assistant
+- [x] Works independanly with it's own web page but  also has native Home Assistant itegration
 - [x] Fully wired
 - [ ] Battery backup - I'm not sure how to apprach this atm
 - [ ] Ethernet with PoE -Take advancte of the UPS on my network switch and reliabilty of Ethernet over WiFi
@@ -30,3 +32,4 @@ I have experentmented with all 3 of these wireless systems but I've stuggled wit
 # Prototype setup
 
 ![alt text](/prototype.jpg)
+
