@@ -8,16 +8,20 @@ My goal is to build an alarm system for each building around the following objec
 
 - [x] Built around the well supported ESP32 and Esphome
 - [x] Off the shelf parts
-- [ ] Supports multiple wired PIR sensors and magnetic doors sensors
-- [ ] Supports NFC tags to arm and disarm
+- [x] Supports multiple wired PIR sensors and magnetic doors sensors
+- [x] Supports NFC tags to arm and disarm
 - [x] Inexpensive to build
 - [x] Easy to extend
 - [x] Easy to program (Esphome)
 - [x] Works independently with it's own web page but  also has native Home Assistant integration
 - [x] Fully wired
+
+To do:
+
 - [ ] Battery backup - I'm not sure how to approach this atm, maybe a 12v battery pack and inline mains sensor?
 - [ ] Ethernet with PoE - Take advantage of the UPS on my network switch and reliability of Ethernet over WiFi
 - [ ] 3D Printed enclosure or adapt existing project box?
+- [ ] Learn Kicad and have a custom PCB produced by PCBway of JLpcb
 
 ## Why not use WiFi / Zigbee / Z-Wave sensors?
 
