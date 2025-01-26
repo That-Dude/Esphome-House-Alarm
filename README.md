@@ -42,9 +42,15 @@ Bill of Materials (prototype) all parts from AliExpress:
 - 12vdc Flashing Siren, extremely loud £2.65
 - RDM6300 NFC reader 125Khz RFID tag reader £1.52
 - RFID tags (10 pack) £2.17
+- MOSFET realy module to tigger the siren £1.10 - I had this laying aroung, you could use a logic level transister which would cost £0.10
 - DC-DC Buck Power Supply Module (12v to 5v) £0.62 (I'm using something similar that I had laying around)
 - Wago 5 way connectors £0.9 each
+- 100m Roll of 6 core alarm cable £10.00 (inc delivery) for CPC Farnell in the UK
 
-Total build cost for Prototype: £32.47 or $40.54 if that's your thing :-)
+Total build cost for Prototype: £42.47 or $53 if that's your thing :-)
 
 You could make this cheaper, I've opted for PIR sensors with pet avoidance which cost £5.06 each, I saw PIR's for less than £1.00 that would probabply work in a pinch.
+
+NB: You can also buy a fully working alarm kit from AliExpress for a lower cost, which is way easier! But I wanted the niceties of an opensource system with bespoke parts to suit my needs. Plus the fun of deleoping it myself.
+
+
