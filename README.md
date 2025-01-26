@@ -1,5 +1,5 @@
 # Esphome-House-Alarm
-Inexpensive alarm system based on Esphome with Home Assistant integration.
+Inexpensive self contained alarm system based on Esphome with optional Home Assistant integration.
 
 # Background
 I live in a property with 4 well spaced out buildings that I would like to protectand and monitor, a house, two barns and a static caravan.
