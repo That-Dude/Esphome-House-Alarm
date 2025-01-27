@@ -1,6 +1,10 @@
 # Esphome-House-Alarm
 Inexpensive self contained alarm system based on Esphome with optional Home Assistant integration.
 
+Note: I'm sure there are more complete projects on github for building your own alarm. I specifically wanted to develop my own as it gives me the opertunity to learn more about software / hardware design and development, while also being a fun and practical.
+
+![Esphome webserver](/esphome-webserver-screenshot.png)
+
 # Background
 I live in a property with 4 well spaced out buildings that I would like to protect and and monitor, a house, two barns and a static caravan.
 
