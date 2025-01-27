@@ -1,7 +1,9 @@
 # Esphome-House-Alarm
 Inexpensive self contained alarm system based on Esphome with optional Home Assistant integration.
 
-Note: I'm sure there are more complete projects on github for building your own alarm. I specifically wanted to develop my own as it gives me the opertunity to learn more about software / hardware design and development, while also being a fun and practical.
+Note: I'm sure there are more complete projects on github for building your own alarm system. I specifically wanted to develop my own as it gives me the opertunity to learn more about software / hardware design and development, while also being a fun and practical.
+
+I'm very open to critique and feedback to improve all aspects of my project, please 
 
 ![Esphome webserver](/esphome-webserver-screenshot.png)
 
@@ -10,33 +12,41 @@ I live in a property with 4 well spaced out buildings that I would like to prote
 
 My goal is to build an alarm system for each building around the following objectives:
 
-- [x] Built around the well supported ESP32 and Esphome
+- [x] Fully self contained and works locally with no Internet required
+- [x] When Internet is available sends updates to mobile devices using PushOver (Could also use telegram)
+- [x] Built around the well supported ESP32 and Esphome software / hardware combo
 - [x] Off the shelf parts
 - [x] Supports multiple wired PIR sensors and magnetic doors sensors
 - [x] Supports NFC tags to arm and disarm
 - [x] Inexpensive to build
 - [x] Easy to extend
 - [x] Easy to program (Esphome)
-- [x] Works independently with it's own web page but  also has native Home Assistant integration
+- [x] Has it's  it's own web management page and native Home Assistant integration
 - [x] Fully wired
+- [x] NFC tags to arm and disarm
 
-To do:
+## Todo:
 
-- [ ] Battery backup - I'm not sure how to approach this atm, maybe a 12v battery pack and inline mains sensor?
-- [ ] Ethernet with PoE - Take advantage of the UPS on my network switch and reliability of Ethernet over WiFi
-- [ ] 3D Printed enclosure or adapt existing project box?
-- [ ] Learn Kicad and have a custom PCB produced by PCBway of JLpcb
+- [ ] Battery backup - I'm not sure how to approach this atm, maybe a 12v battery pack and inline mains sensor? Ideally an off the shelf part exists. I might resolve this using PoE as my switch has a large UPS already.
+- [ ] Ethernet option
+- [ ] 3D Printed enclosure or adapt off the shelf project box?
+- [ ] Learn Kicad and produce a custom PCB via PCBway or JLpcb (this looks like a fun learning experience)
+- [ ] Consider integrating 433Mhz receiver to interact with remote 433Mhz PIR and magnet sensors
 
 ## Why not use WiFi / Zigbee / Z-Wave sensors?
 
-I have experimented with all 3 of these wireless systems but I've struggled with reliability, namely:
+I have experimented with all 3 of these wireless options in combination with Home Assistant but I've struggled with reliability, namely:
 
 - Connections dropping / Interference
-- Battery issues
+- Battery issues on sensors
 - Home Assistant / Z2M / Wifi issues
 - Power loss
 - Updates to devices and Home Assistant
 - Reboots
+
+When it works it's great! But it's simply not reliable enough to meet my needs.
+
+Shutout to Ararmo on Home Assistant - which I love! it's an excellent option if you choose to go that route. Note, this project is actually compatible with Alarmo, all of the PIR and magnet sensors show up in Home Assistant.
 
 # Prototype setup
 
@@ -243,3 +253,7 @@ binary_sensor:
       - button.press: AlarmGracePeriod
       - switch.toggle: alarm_state
 ````
+
+# GPIO - which ones to use?
+
+![ESP32 WRoom Pinout](/esp32_pinout.jpg)
