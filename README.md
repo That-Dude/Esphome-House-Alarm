@@ -536,10 +536,10 @@ If you need more GPIOs then a PCF8574 IO Expansion Board would be a good choice 
 # FAQ
 
 #### Q: Why didn't you add a keypad?
-A: I chose RFID fobs as they allow me to track the alarm users - the logs show me who activated / deactivated the alarm and when. You also have the web interface or Home Assistant if you need to arm/disarm the alarm remotely.
+A: I chose RFID fobs as they allow me to track the alarm users - the logs show me who activated / deactivated the alarm and when. You also have the web interface or Home Assistant if you need to arm/disarm the alarm remotely. It's totally possible to add keypads if you need them.
 
 #### Q: Your code is poorly optimized and verbose
-A: Damn right! :-) It easy to maintain for a small number of sensors and RFID fobs but it would help to optimize it for larger installations. Feel free to submit a change request if you do this.
+A: Damn right! 😃 It easy to maintain for a small number of sensors and RFID fobs but it would help to optimize it for larger installations. Feel free to submit a change request if you do this.
 
 #### Q: The ESPhome log complains about "components taking a long time"
 A: You can ignore this, the "long time" is the debouncing delay for the RFID reader, the PIR sensors and the website interface updates, all build in ESPhome features.
