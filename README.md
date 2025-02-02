@@ -543,3 +543,9 @@ A: Damn right! :-) It easy to maintain for a small number of sensors and RFID fo
 
 #### Q: The ESPhome log complains about "components taking a long time"
 A: You can ignore this, the "long time" is the debouncing delay for the RFID reader, the PIR sensors and the website interface updates, all build in ESPhome features.
+
+#### Q: Do I have to recompile and update the ESPhome code in order to revoke or add a new RFID tag?
+
+A: Yes! I'm deploying 4 of these alarm systems and I have 2 kids that will 100% lose their key fobs at least once every 3 months, this means I have to edit the code for 4 alarms and update it.
+
+I'm not sure what would be a good solution for this. I did consider checking a remote database for RFID authentication but that breaks the 'self contained' nature of the alarm system. I need it to work reliably when there is no WiFi / Internet connection. If you have an idea, open and issue so that we can discuss it!
