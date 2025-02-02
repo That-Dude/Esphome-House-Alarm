@@ -3,20 +3,20 @@ Inexpensive self contained alarm system based on Esphome with optional Home Assi
 
 Note: I'm sure there are more complete projects on github for building your own alarm system. I specifically wanted to develop my own as it gives me the opertunity to learn more about software / hardware design and development, while also being a fun and practical.
 
-I'm very open to critique and feedback to improve all aspects of my project, please 
+I'm very open to critique and feedback to improve all aspects of my project, please open a ticket.
 
 ![Esphome webserver](/esphome-webserver-screenshot.png)
 
 # Background
-I live in a property with 4 well spaced out buildings that I would like to protect and and monitor, a house, two barns and a static caravan.
+I live in a property with 4 separate buildings that I would like to protect and and monitor, a house, two barns and a static caravan.
 
 My goal is to build an alarm system for each building around the following objectives:
 
 - [x] Fully self contained and works locally with no Internet required
 - [x] When Internet is available sends updates to mobile devices using PushOver (could also use telegram)
 - [x] Built around the well supported ESP32 and Esphome software / hardware combo
-- [x] Off the shelf parts
-- [x] Supports multiple wired PIR sensors and magnetic doors sensors
+- [x] Off the shelf components
+- [x] Supports multiple wired PIR sensors and magnetic door/window sensors
 - [x] Supports NFC tags to arm and disarm
 - [x] Inexpensive to build
 - [x] Easy to extend
@@ -24,29 +24,31 @@ My goal is to build an alarm system for each building around the following objec
 - [x] Has it's own password protected web management page and native Home Assistant integration
 - [x] Fully wired
 - [x] Supports NFC tags to arm and disarm
+- [x] Use the sensors in Home Assistance for non-alarm purposes such as presence and to check door statuses, you can also use those sensors in Alarmo if you don't need a self contained system.
 
 ## Todo:
 
-- [ ] Battery backup - I'm not sure how to approach this atm, maybe a 12v battery pack and inline mains sensor? Ideally an off the shelf part exists. I might resolve this using PoE as my switch has a large UPS already.
+- [ ] Battery backup - I'm not sure how to approach this atm, maybe a 12v battery pack and inline mains sensor? Ideally an off the shelf part exists. I might resolve this using PoE as my network switch has a large UPS.
 - [ ] Ethernet option
 - [ ] 3D Printed enclosure or adapt off the shelf project box?
 - [ ] Learn Kicad and produce a custom PCB via PCBway or JLpcb (this looks like a fun learning experience)
 - [ ] Consider integrating 433Mhz receiver to interact with remote 433Mhz PIR and magnet sensors
+- [ ] Maybe swap some PIR sensors for MmWave sensors, they are extremely cheap and might be a great option
 
 ## Why not use WiFi / Zigbee / Z-Wave sensors?
 
 I have experimented with all 3 of these wireless options in combination with Home Assistant but I've struggled with reliability, namely:
 
 - Connections dropping / Interference
-- Battery issues on sensors
+- Battery depletion on sensors
 - Home Assistant / Z2M / Wifi issues
 - Power loss
-- Updates to devices and Home Assistant
-- Reboots
+- Breaking updates to devices and Home Assistant 
+- Reboots of any critical component
 
 When it works it's great! But it's simply not reliable enough to meet my needs.
 
-Shutout to Ararmo on Home Assistant - which I love! it's an excellent option if you choose to go that route. Note, this project is actually compatible with Alarmo, all of the PIR and magnet sensors show up in Home Assistant.
+That being said, a big shout out to Ararmo on Home Assistant - which I love! it's an excellent option if you choose to go that route. Note, this project is actually compatible with Alarmo, all of the PIR and magnet sensors and sirens are present in Home Assistant.
 
 # Prototype setup
 
@@ -59,22 +61,33 @@ The first step was to put together a working prototype. After lots of trial and 
 - Esp32Wroom £2.30
 - Mains to 12vdc 1A transformer (LED driver) £1.71
 - 12vdc PIR Motion Sensor Wired Alarm Dual Infrared Detector Pet Immune (2 pack) £10.13
-- Magnetic door sensor (10 pack) £11.19
+- Magnetic door sensor - high quality (10 pack) £11.19
 - 12vdc Flashing Siren, extremely loud £2.65
 - RDM6300 NFC reader 125Khz RFID tag reader £1.52
 - RFID tags (10 pack) £2.17
 - MOSFET driver module to trigger the siren £1.10 - I had this laying around, you could use a logic level transistor which would cost £0.10
 - DC-DC Buck Power Supply Module (12v to 5v) £0.62 (I'm using something similar that I had laying around)
-- Wago 5 way connectors £0.9 each
+- Wago 5 way connectors (temporary solution) £0.9 each
 - 100m Roll of 6 core alarm cable £10.00 (inc delivery) for CPC Farnell in the UK
 
-Total build cost for Prototype: £42.47 or $53 if that's your thing :-)
+Total build cost for Prototype around £42 or $53 if that's your thing :-)
 
-You could make this cheaper, I've opted for PIR sensors with pet avoidance which cost £5.06 each, I saw PIR's for less than £1.00 that would probably work in a pinch.
+You could certainly make this cheaper, I've opted for PIR sensors with pet avoidance which cost £5.06 each, I saw PIR's for less than £1.00 that would probably work in a pinch.
 
-NB: You can also buy a fully working alarm kit from AliExpress for a lower cost, which is way easier! But I wanted the niceties of an open source system with bespoke parts to suit my needs. Plus the fun of developing it myself.
+NB: You can also buy a fully working alarm kit from AliExpress for a lower cost, which is way easier! But I wanted all of the items listed at the top of this page, and that can only be done with an open source solution.
 
 # Esphome code
+
+Here is my working code, it supports:
+
+- 4 Magnet sensors
+- 4 PIRs
+- 1 siren output with 2 sirens connected
+- 1 NFC reader (2 supported)
+- 3 NFC Tags (unlimited supported)
+- 1 Status LED
+
+This code is commented and (hopefully) easy to read and expand.
 
 ````yaml
 esphome:
@@ -138,9 +151,9 @@ wifi:
 captive_portal:
 
 
-################################################################################################ start ################################################################################################
+################################### start ###################################
 
-############ Siren output  ############
+# Siren output
 # alarm siren is on pin 23. We activate the mosfet gate allowing 12v to pass
 # A relay or trasister would do this just fine, I just had a mosfet module to hand
 switch:
@@ -150,15 +163,15 @@ switch:
       mode: output
     id: siren
 
-############ Status status_led  ############
+# Status status_led
   - platform: gpio
     pin: 
       number: 4
       mode: output
     id: status_led
 
-############ Alarm activation state  ############
-# This switch tracks the state of the alarm, and can be used to manually activate it
+# Alarm activation state
+# This switch tracks the state of the alarm, and can be used to manually activate it from the web UI or Home Assistant
   - platform: template
     name: "Armed State"
     id: armed_state
@@ -191,7 +204,6 @@ button:
                     user: !secret pushover_user_key
                     message: "Arming alarm..."
                     title: "House Alarm"
-              - switch.turn_off: siren # just in case
               - logger.log: "*** INFO: starting 10s delay..."
               - repeat:
                   count: 20 # 20 * 500ms = 10s 
@@ -245,7 +257,6 @@ button:
             else:
               # disarm the alarm
               - switch.turn_off: armed_state
-              - switch.turn_off: siren
               - logger.log: "*** INFO: Alarm is armed, disarming with RFID Tag"
               - http_request.post:
                   url: https://api.pushover.net/1/messages.json
@@ -265,7 +276,8 @@ button:
     name: "Alarm Triggered"
     on_press:
       then:
-      # Sends a high priority alert notifcation to my pushover devices (phone will sound even during quiet hours and you have to acknowstatus_ledge the message to stop it)
+      # Sends a high priority alert notifcation to my pushover devices
+      # Phone will sound even during quiet hours and you have to acknowstatus_ledge the message to stop it
         - http_request.post:
             url: https://api.pushover.net/1/messages.json
             headers:
@@ -294,28 +306,29 @@ rdm6300:
 
 binary_sensor:
 
-################################################################################################ PIR Sensors ################################################################################################
+################################### PIR Sensors ###################################
 
 ############# PIR setup pins 34,35,36,39 ############
 
-# These require the internal pullup resister to be disabstatus_led
+# These require the internal pullup resister to be disabled
   # - platform: gpio
   #   id: PIR01
   #   name: "PIR 01"
   #   device_class: motion
   #   filters:
-  #     - delayed_off: 1000ms # the PIR sends a lot of activation traffic, this debouces it a single trigger
+  #     - delayed_off: 300ms # the PIR sends a lot of activation traffic, this debounces it a single trigger
   #   pin:  
   #       number: GPIO39
   #       mode:
   #           input: true
-  #   on_press:
-  #     then:
-  #       - if:
-  #           condition:
-  #              switch.is_on: armed_state
-  #           then:
-  #             - button.press: AlarmTriggered
+    # on_press:
+    #   then:
+    #     - if:
+    #         condition:
+    #            switch.is_on: armed_state
+    #         then:
+    #           - button.press: AlarmTriggered
+    #           - logger.log: "*** ALERT: Alarm Tripped - PIR01"
 
 
   - platform: gpio
@@ -323,7 +336,7 @@ binary_sensor:
     name: "PIR 02"
     device_class: motion
     filters:
-      - delayed_off: 1000ms # the PIR sends a lot of activation traffic, this debouces it a single trigger
+      - delayed_off: 300ms # the PIR sends a lot of activation traffic, this debounces it a single trigger
     pin:  
         number: GPIO36
         mode:
@@ -342,7 +355,7 @@ binary_sensor:
   #   name: "PIR 03"
   #   device_class: motion
   #   filters:
-  #     - delayed_off: 1000ms # the PIR sends a lot of activation traffic, this debouces it a single trigger
+  #     - delayed_off: 300ms # the PIR sends a lot of activation traffic, this debounces it a single trigger
   #   pin:  
   #       number: GPIO35
   #       mode:
@@ -354,13 +367,14 @@ binary_sensor:
   #              switch.is_on: armed_state
   #           then:
   #             - button.press: AlarmTriggered
+  #             - logger.log: "*** ALERT: Alarm Tripped - PIR03"
 
   # - platform: gpio
   #   id: PIR04
   #   name: "PIR 04"
   #   device_class: motion
   #   filters:
-  #     - delayed_off: 1000ms # the PIR sends a lot of activation traffic, this debouces it a single trigger
+  #     - delayed_off: 300ms # the PIR sends a lot of activation traffic, this debounces it a single trigger
   #   pin:  
   #       number: GPIO34
   #       mode:
@@ -372,8 +386,9 @@ binary_sensor:
   #              switch.is_on: armed_state
   #           then:
   #             - button.press: AlarmTriggered
+  #             - logger.log: "*** ALERT: Alarm Tripped - PIR03"
 
-################################################################################################ Magnet Sensors ################################################################################################
+################################### Magnet Sensors ###################################
 
 # MAGNET01 is the MAIN DOOR and allows a 10s delay for the user to disarm the alarm before triggering
   - platform: gpio
@@ -467,13 +482,13 @@ binary_sensor:
               - button.press: AlarmTriggered
               - logger.log: "*** ALERT: Alarm Tripped - MAGNET04"
 
-################################################################################################ NFC Tags ################################################################################################
+################################### NFC Tags ###################################
 
   - platform: rdm6300
     uid: !secret red_nfc_tag
     name: "NFC tag: RED"
     device_class: presence
-    filters: # the NFC reader sends a lot of activation traffic, this debouces it a single activation
+    filters: # the NFC reader sends a lot of activation traffic, this debounces it a single activation
       - delayed_off: 200ms
     on_press:
       then:
@@ -483,7 +498,7 @@ binary_sensor:
     uid: !secret blue_nfc_tag
     name: "NFC tag: BLUE"
     device_class: presence
-    filters: # the NFC reader sends a lot of activation traffic, this debouces it a single activation
+    filters: # the NFC reader sends a lot of activation traffic, this debounces it a single activation
       - delayed_off: 200ms
     on_press:
       then:
@@ -493,29 +508,38 @@ binary_sensor:
     uid: !secret green_nfc_tag
     name: "NFC tag: GREEN"
     device_class: presence
-    filters: # the NFC reader sends a lot of activation traffic, this debouces it a single activation
+    filters: # the NFC reader sends a lot of activation traffic, this debounces it a single activation
       - delayed_off: 200ms
     on_press:
       then:
         - button.press: rfid_detected
-
 ````
 
-# Available GPIO pins
+# Available GPIO pins and more sensors
 
-![ESP32 WRoom Pinout](/esp32_pinout.jpg)
+![ESP32 Wroom Pinout](/esp32_pinout.jpg)
 
-Initially I planned on adding a multiplexer chip to make more inputs available, but it turns out the standard ESP32Wroom modules have 19 pins that we can use for an alarm system, 15 pins for general IO and 4 more pins that are input only - which is perfect for out PIR and magnetic door sensors.
+Initially I planned on adding a multiplexer chip to make more inputs available, but it turns out the standard ESP32Wroom modules have 19 pins that we can use for an alarm system, 15 pins for general IO and 4 more pins that are input only - which is perfect for my needs. 
 
 I need a maximum of 4 PIRs and 4 Door sensors, so I've assigned my pins like this:
 
-34,35,36,39 - PIR sensors
-25,26,32,33 - Door sensors
-23 - Siren (connected to MOSFET)
-13 - RFID reader (UART RX connected to RM6300 TX pin)
-4 - RED LED to indicate armed status
+- 34,35,36,39 - PIR sensors
+- 25,26,32,33 - Door sensors
+- 23 - Siren (connected to MOSFET)
+- 13 - RFID reader (UART RX connected to RM6300 TX pin)
+- 4 - RED LED to indicate armed status
 
-11 PINS used, 8 available for other things:
+11 PINS used, 8 available for other things.
 
-- A piezo buzzer for audio feedback
-... other stuff
+If you need more GPIOs then a PCF8574 IO Expansion Board would be a good choice (£1.10 each), the boards connect to an I2C-Bus and have 8 GPIOs each, they can be connected in series to a maximum of 4 board or 32 additional GPIOs. The ESP32 supports dual I2C buses so that's 64 GPIOs on the expanders, plus 19 GPIOs on the esp32 for a total of 83 GPIOs.
+
+# FAQ
+
+#### Q: Why didn't you add a keypad?
+A: I chose RFID fobs as they allow me to track the alarm users - the logs show me who activated / deactivated the alarm and when. You also have the web interface or Home Assistant if you need to arm/disarm the alarm remotely.
+
+#### Q: Your code is poorly optimized and verbose
+A: Damn right! :-) It easy to maintain for a small number of sensors and RFID fobs but it would help to optimize it for larger installations. Feel free to submit a change request if you do this.
+
+#### Q: The ESPhome log complains about "components taking a long time"
+A: You can ignore this, the "long time" is the debouncing delay for the RFID reader, the PIR sensors and the website interface updates, all build in ESPhome features.
