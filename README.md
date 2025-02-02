@@ -82,7 +82,7 @@ Here is my working code, it supports:
 
 - 4 Magnet sensors
 - 4 PIRs
-- 1 siren output with 2 sirens connected
+- 1 siren output (connect as many sirens as you need)
 - 1 NFC reader (2 supported)
 - 3 NFC Tags (unlimited supported)
 - 1 Status LED
