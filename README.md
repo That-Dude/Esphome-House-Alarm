@@ -1,9 +1,7 @@
 # Esphome-House-Alarm
 Inexpensive self contained alarm system based on Esphome with optional Home Assistant integration.
 
-Note: I'm sure there are more complete projects on github for building your own alarm system. I specifically wanted to develop my own as it gives me the opertunity to learn more about software / hardware design and development, while also being a fun and practical.
-
-I'm very open to critique and feedback to improve all aspects of my project, please open a ticket.
+I'm very open to critique and feedback to improve all aspects of this project, let's talk!
 
 ![Esphome webserver](/esphome-webserver-screenshot.png)
 
@@ -12,32 +10,30 @@ I live in a property with 4 separate buildings that I would like to protect and 
 
 My goal is to build an alarm system for each building around the following objectives:
 
-- [x] Fully self contained and works locally with no Internet required
-- [x] When Internet is available sends updates to mobile devices using PushOver (could also use telegram)
-- [x] Built around the well supported ESP32 and Esphome software / hardware combo
-- [x] Off the shelf components
+- [x] Fully self contained and works locally with no Internet or Home Assistant required
+- [x] When Internet is available sends updates to mobile devices using PushOver (could also use telegram or whatever)
+- [x] Built around ESP32 and Esphome software stack
+- [x] Off The Shelf components
 - [x] Supports multiple wired PIR sensors and magnetic door/window sensors
-- [x] Supports NFC tags to arm and disarm
+- [x] Supports NFC/RFID tags to arm and disarm
 - [x] Inexpensive to build
 - [x] Easy to extend
 - [x] Easy to program (Esphome)
 - [x] Has it's own password protected web management page and native Home Assistant integration
 - [x] Fully wired
-- [x] Supports NFC tags to arm and disarm
-- [x] Use the sensors in Home Assistance for non-alarm purposes such as presence and to check door statuses, you can also use those sensors in Alarmo if you don't need a self contained system.
+- [x] All sensors available in Home Assistance for non-alarm purposes such as presence detection and to check door/window status, you can also use those sensors in Alarmo if you don't need a self contained system.
 
 ## Todo:
-
 - [ ] Battery backup - I'm not sure how to approach this atm, maybe a 12v battery pack and inline mains sensor? Ideally an off the shelf part exists. I might resolve this using PoE as my network switch has a large UPS.
-- [ ] Ethernet option
-- [ ] 3D Printed enclosure or adapt off the shelf project box?
+- [ ] Ethernet option (with or without PoE)
+- [ ] 3D Printed enclosure or adapt an off the shelf project box?
 - [ ] Learn Kicad and produce a custom PCB via PCBway or JLpcb (this looks like a fun learning experience)
-- [ ] Consider integrating 433Mhz receiver to interact with remote 433Mhz PIR and magnet sensors
-- [ ] Maybe swap some PIR sensors for MmWave sensors, they are extremely cheap and might be a great option
+- [ ] Maybe swap some PIR sensors for MmWave sensors, they are extremely cheap and might be a good option in some spaces. I'm thinking above rooms where ceiling access is available.
 
 ## Why not use WiFi / Zigbee / Z-Wave sensors?
+TL:DR - Reliability
 
-I have experimented with all 3 of these wireless options in combination with Home Assistant but I've struggled with reliability, namely:
+I have a lot of experimented with all 3 of these wireless options in combination with Home Assistant but I've struggled with reliability, namely:
 
 - Connections dropping / Interference
 - Battery depletion on sensors
@@ -46,18 +42,14 @@ I have experimented with all 3 of these wireless options in combination with Hom
 - Breaking updates to devices and Home Assistant 
 - Reboots of any critical component
 
-When it works it's great! But it's simply not reliable enough to meet my needs.
-
-That being said, a big shout out to Ararmo on Home Assistant - which I love! it's an excellent option if you choose to go that route. Note, this project is actually compatible with Alarmo, all of the PIR and magnet sensors and sirens are present in Home Assistant.
+When it works it's great! But it's simply not reliable enough to meet my needs due to the number of moving parts. It's hard to beat a single lower power devices with all sensors hard wired to it!
 
 # Prototype setup
-
 ![Ptototype image](/prototype.jpg)
 
 The first step was to put together a working prototype. After lots of trial and error these are the components that worked for me.
 
 ### Bill of Materials (prototype) all parts from AliExpress:
-
 - Esp32Wroom £2.30
 - Mains to 12vdc 1A transformer (LED driver) £1.71
 - 12vdc PIR Motion Sensor Wired Alarm Dual Infrared Detector Pet Immune (2 pack) £10.13
@@ -72,22 +64,20 @@ The first step was to put together a working prototype. After lots of trial and 
 
 Total build cost for Prototype around £42 or $53 if that's your thing :-)
 
-You could certainly make this cheaper, I've opted for PIR sensors with pet avoidance which cost £5.06 each, I saw PIR's for less than £1.00 that would probably work in a pinch.
-
-NB: You can also buy a fully working alarm kit from AliExpress for a lower cost, which is way easier! But I wanted all of the items listed at the top of this page, and that can only be done with an open source solution.
+You could certainly make this cheaper, I've opted for PIR sensors with pet avoidance which cost £5.06 each, I saw PIR's for less than £1.00 that would probably work in a pinch, MmWare sensors are also very cheap.
 
 # Esphome code
-
 Here is my working code, it supports:
 
-- 4 Magnet sensors
-- 4 PIRs
-- 1 siren output (connect as many sirens as you need)
+- 4 Magnet sensors (supports many - see section below code)
+- 4 PIRs (supports many - see section below code)
+- 1 siren output (supports many)
 - 1 NFC reader (2 supported)
-- 3 NFC Tags (unlimited supported)
+- 3 NFC Tags (supports many)
 - 1 Status LED
+- 1 Buzzer for feedback
 
-This code is commented and (hopefully) easy to read and expand.
+The code is commented and (hopefully) easy to read and alter for you needs.
 
 ````yaml
 esphome:
@@ -96,15 +86,10 @@ esphome:
   on_boot:
     priority: 250
     then:
-      - http_request.post:
-          url: https://api.pushover.net/1/messages.json
-          headers:
-            Content-Type: application/json
-          json:
-            token: !secret pushover_api_token
-            user: !secret pushover_user_key
-            message: "Device just booted..."
-            title: "House Alarm"
+      - text_sensor.template.publish:
+          id: po_message
+          state: "Alarm booted"
+      - script.execute: pushover_message
 
 http_request:
   verify_ssl: false
@@ -152,21 +137,41 @@ captive_portal:
 
 
 ################################### start ###################################
+substitutions:
+  buzzer_pin: GPIO5
+  siren_pin: GPIO23
+  led_pin: GPIO4
+  rfid_reader_pin: GPIO13
+  pir01_pin: GPIO39
+  pir02_pin: GPIO36
+  pir03_pin: GPIO35
+  pir04_pin: GPIO34
+  magnet01_pin: GPIO32
+  magnet02_pin: GPIO33
+  magnet03_pin: GPIO25
+  magnet04_pin: GPIO26
+
+
+output:
+  - platform: ledc
+    # One buzzer leg connected to buzzer_pin, the other to GND
+    pin: $buzzer_pin
+    id: buzzer
 
 # Siren output
-# alarm siren is on pin 23. We activate the mosfet gate allowing 12v to pass
+# alarm siren is on pin siren_pin. We activate the mosfet gate allowing 12v to pass
 # A relay or trasister would do this just fine, I just had a mosfet module to hand
 switch:
   - platform: gpio
     pin: 
-      number: GPIO23
+      number: $siren_pin
       mode: output
     id: siren
 
-# Status status_led
+# Status LED
   - platform: gpio
     pin: 
-      number: 4
+      number: $led_pin
       mode: output
     id: status_led
 
@@ -184,133 +189,178 @@ switch:
         - switch.turn_off: status_led
         - switch.turn_off: siren
 
-button:
+# I'm using this as a string variable for the pushover messaging script
+text_sensor:
   - platform: template
-    id: "rfid_detected"
-    name: "RFID Detected"
-    on_press:
-      then:
-        - if:
-            condition:
-              switch.is_off: armed_state
-            then: # arm the alarm
-              - logger.log: "*** INFO: Alaarm is off, we are arming it..."
-              - http_request.post:
-                  url: https://api.pushover.net/1/messages.json
-                  headers:
-                    Content-Type: application/json
-                  json:
-                    token: !secret pushover_api_token
-                    user: !secret pushover_user_key
-                    message: "Arming alarm..."
-                    title: "House Alarm"
-              - logger.log: "*** INFO: starting 10s delay..."
-              - repeat:
-                  count: 20 # 20 * 500ms = 10s 
-                  then:
-                    - switch.turn_on: status_led
-                    - delay: "250ms"
-                    - switch.turn_off: status_led
-                    - delay: "250ms"
-              - logger.log: "*** INFO: Ending 10s delay..."
-                # You should be out of the house at this point with the doors closed. Let's verify that....
-              - if: 
-                  condition:
-                    binary_sensor.is_on: PIR02
-                  then:
-                    - logger.log: "*** ERROR: PIR02 prevented Arming"
-                    - http_request.post:
-                        url: https://api.pushover.net/1/messages.json
-                        headers:
-                          Content-Type: application/json
-                        json:
-                          token: !secret pushover_api_token
-                          user: !secret pushover_user_key
-                          message: "ERROR: PIR01 prevented Arming"
-                          title: "House Alarm"
-              - if:
-                  condition:
-                    binary_sensor.is_on: MAGNET01
-                  then:
-                    - logger.log: "*** ERROR: MAGNET01 prevented Arming"
-                    - http_request.post:
-                        url: https://api.pushover.net/1/messages.json
-                        headers:
-                          Content-Type: application/json
-                        json:
-                          token: !secret pushover_api_token
-                          user: !secret pushover_user_key
-                          message: "ERROR: MAGNET01 prevented Arming"
-                          title: "House Alarm"
-                  else:
-                    - switch.turn_on: armed_state
-                    - logger.log: "*** INFO: Alarm Armed"
-                    - http_request.post:
-                        url: https://api.pushover.net/1/messages.json
-                        headers:
-                          Content-Type: application/json
-                        json:
-                          token: !secret pushover_api_token
-                          user: !secret pushover_user_key
-                          message: "INFO: Alarm Armed"
-                          title: "House Alarm"
-            else:
-              # disarm the alarm
-              - switch.turn_off: armed_state
-              - logger.log: "*** INFO: Alarm is armed, disarming with RFID Tag"
-              - http_request.post:
-                  url: https://api.pushover.net/1/messages.json
-                  headers:
-                    Content-Type: application/json
-                  json:
-                    token: !secret pushover_api_token
-                    user: !secret pushover_user_key
-                    message: "INFO: Alarm is armed, disarming with RFID Tag"
-                    title: "House Alarm"
-              
+    name: "Pushover message"
+    id: po_message
 
-############ Trigger the alarm  ############
- # . This is the full blown alarm sound, default 60 seconds
-  - platform: template
-    id: "AlarmTriggered"
-    name: "Alarm Triggered"
-    on_press:
-      then:
-      # Sends a high priority alert notifcation to my pushover devices
-      # Phone will sound even during quiet hours and you have to acknowstatus_ledge the message to stop it
-        - http_request.post:
-            url: https://api.pushover.net/1/messages.json
-            headers:
-              Content-Type: application/json
-            json:
-              token: !secret pushover_api_token
-              user: !secret pushover_user_key
-              message: "The alarm has triggered"
-              title: "Alarm Triggered"
-              sound: "siren" # optional
-              priority: "2" # -2 to 2
-              retry: "30" # retry is mandatory with prio 2
-              expire: "60" # expire is mandatory with prio 2
-      # Tuen on the siren for X seconds
-        - switch.turn_on: siren
-        - delay: "300s" # siren sounds for 5 minures
-        - switch.turn_off: siren
+script:
+   # Pushover message script    
+  - id: pushover_message
+    then:
+      - http_request.post:
+          url: https://api.pushover.net/1/messages.json
+          headers:
+            Content-Type: application/json
+          json:
+            token: !secret pushover_api_token
+            user: !secret pushover_user_key
+            title: "House Alarm"
+            message: !lambda |-
+              return id(po_message).state;
+
+# Set a grace period when arming / disarming the alarm with specific sensors, in my case I want the main door manget to:
+# : On Entry: Don't set off the siren immediately, but give me XX senconds to present an RFID tag to disable the alarm
+# : On exit: give me XX seconds to close the main door before arming.
+  - id: grace_period
+    then:
+      - repeat: # beep and flash the LED x times
+          count: 10
+          then:
+            - switch.turn_on: status_led
+            - delay: 200ms
+            - output.turn_on: buzzer
+            - output.ledc.set_frequency:
+                id: buzzer
+                frequency: "2000Hz"
+            - output.set_level:
+                id: buzzer
+                level: "50%"
+            - delay: 200ms
+            - output.turn_off: buzzer
+            - switch.turn_off: status_led
+            - if:
+                condition: # in the loop, check to see if an rfid tag as presented to disarm during the grace period
+                  or:
+                    - binary_sensor.is_on: green
+                    - binary_sensor.is_on: red
+                    - binary_sensor.is_on: blue
+                then:
+                  - script.stop: rfid_detected
+                  - text_sensor.template.publish:
+                      id: po_message
+                      state: "INFO: Disarmed during grace period"
+                  - script.execute: pushover_message
+                  - script.stop: grace_period
+
+  # Error beep sound    
+  - id: error_beep
+    then:
+      - output.turn_on: buzzer
+      - output.ledc.set_frequency:
+          id: buzzer
+          frequency: "2000Hz"
+      - output.set_level:
+          id: buzzer
+          level: "50%"
+      - delay: 3s
+      - output.ledc.set_frequency:
+          id: buzzer
+          frequency: "1800Hz"
+      - output.set_level:
+          id: buzzer
+          level: "50%"
+      - delay: 3s
+      - output.turn_off: buzzer
+ 
+  # Process to arm / disarm the alarm after an RFID is presented
+  - id: rfid_detected
+    then:
+      if:
+        condition:
+          switch.is_off: armed_state
+        then: # arm the alarm
+          - logger.log:
+              format: "** INFO: Alaarm is off, we are arming it..."
+              level: info
+          - delay: 300ms # required to allow rfid binary sensor time to tunr off
+          - text_sensor.template.publish:
+              id: po_message
+              state: "INFO: Arming..."
+          - script.execute: pushover_message
+          - script.execute: grace_period
+          - script.wait: grace_period
+          - if: # make sure these sensors are OFF (door closed) before actually arming...
+              condition:
+                binary_sensor.is_on: PIR02
+              then:
+                - logger.log:
+                    format: "*** ERROR: PIR02 prevented Arming"
+                    level: info
+                - text_sensor.template.publish:
+                    id: po_message
+                    state: "ERROR: PIR02 prevented Arming"
+                - script.execute: pushover_message                
+          - if:
+              condition:
+                binary_sensor.is_on: MAGNET01
+              then:
+                - script.execute: error_beep
+                - logger.log:
+                    format: "*** *** ERROR: MAGNET01 prevented Arming"
+                    level: info
+                - text_sensor.template.publish:
+                    id: po_message
+                    state: "ERROR: MAGNET01 prevented Arming"
+                - script.execute: pushover_message     
+              else:
+                - switch.turn_on: armed_state # all sensors are CLEAR - tunn on the alarm
+                - logger.log:
+                    format: "*** INFO: Sensors are clear - Alarm Armed"
+                    level: info
+                - text_sensor.template.publish:
+                    id: po_message
+                    state: "INFO: Alarm is now ARMED"
+                - script.execute: pushover_message     
+        else:
+          # disarm the alarm
+          - switch.turn_off: armed_state
+          - logger.log:
+              format: "*** INFO: Alarm DISARMED"
+              level: info
+          - text_sensor.template.publish:
+              id: po_message
+              state: "INFO: Alarm DISARMED"
+          - script.execute: pushover_message
+          
+############ Trigger the siren  ############
+  - id: alarm_triggered
+    then:
+    # Sends a high priority alert notifcation to my pushover devices
+    # Phone will sound even during quiet hours and you have to acknowstatus_ledge the message to stop it
+      - http_request.post:
+          url: https://api.pushover.net/1/messages.json
+          headers:
+            Content-Type: application/json
+          json:
+            token: !secret pushover_api_token
+            user: !secret pushover_user_key
+            message: "The alarm has triggered"
+            title: "Alarm Triggered"
+            sound: "siren" # optional
+            priority: "2" # -2 to 2
+            retry: "30" # retry is mandatory with prio 2
+            expire: "60" # expire is mandatory with prio 2
+    # turn on the siren
+      - switch.turn_on: siren
+
 
 # Setup the UART for the RDM6300 RFID reader
 uart:
-  rx_pin: GPIO13
+  rx_pin: $rfid_reader_pin
   baud_rate: 9600
 
 # Enable the RFID reader
 rdm6300:
 
 binary_sensor:
-
 ################################### PIR Sensors ###################################
 
 ############# PIR setup pins 34,35,36,39 ############
 
 # These require the internal pullup resister to be disabled
+
   # - platform: gpio
   #   id: PIR01
   #   name: "PIR 01"
@@ -318,7 +368,7 @@ binary_sensor:
   #   filters:
   #     - delayed_off: 300ms # the PIR sends a lot of activation traffic, this debounces it a single trigger
   #   pin:  
-  #       number: GPIO39
+  #       number: $pir01_pin
   #       mode:
   #           input: true
     # on_press:
@@ -330,7 +380,6 @@ binary_sensor:
     #           - button.press: AlarmTriggered
     #           - logger.log: "*** ALERT: Alarm Tripped - PIR01"
 
-
   - platform: gpio
     id: PIR02
     name: "PIR 02"
@@ -338,7 +387,7 @@ binary_sensor:
     filters:
       - delayed_off: 300ms # the PIR sends a lot of activation traffic, this debounces it a single trigger
     pin:  
-        number: GPIO36
+        number: $pir02_pin
         mode:
             input: true
     on_press:
@@ -347,9 +396,11 @@ binary_sensor:
             condition:
                switch.is_on: armed_state
             then:
-              - button.press: AlarmTriggered
-              - logger.log: "*** ALERT: Alarm Tripped - PIR02"
-
+              - script.execute: alarm_triggered
+              - logger.log:
+                  format: "*** ALERT: Alarm Tripped - PIR02"
+                  level: info     
+                          
   # - platform: gpio
   #   id: PIR03
   #   name: "PIR 03"
@@ -357,7 +408,7 @@ binary_sensor:
   #   filters:
   #     - delayed_off: 300ms # the PIR sends a lot of activation traffic, this debounces it a single trigger
   #   pin:  
-  #       number: GPIO35
+  #       number: $pir03_pin
   #       mode:
   #           input: true
   #   on_press:
@@ -376,7 +427,7 @@ binary_sensor:
   #   filters:
   #     - delayed_off: 300ms # the PIR sends a lot of activation traffic, this debounces it a single trigger
   #   pin:  
-  #       number: GPIO34
+  #       number: $pir04_pin
   #       mode:
   #           input: true
   #   on_press:
@@ -396,7 +447,7 @@ binary_sensor:
     name: "MAGNET 01"
     device_class: door
     pin:  
-        number: GPIO32
+        number: $magnet01_pin
         mode:
             input: true
             pullup: true
@@ -407,30 +458,30 @@ binary_sensor:
             condition:
                switch.is_on: armed_state
             then:
-              - logger.log: "*** INFO: Main Door opened, starting entry grace period..."
-              - repeat:
-                  count: 20 # 20 * 500ms = 10s 
-                  then:
-                    - switch.turn_on: status_led
-                    - delay: "250ms"
-                    - switch.turn_off: status_led
-                    - delay: "250ms"
+              - logger.log:
+                  format: "*** INFO: Main Door opened, starting entry grace period..."
+                  level: info
+              - script.execute: grace_period
+              - script.wait: grace_period
               - if:
                   condition:
                     switch.is_off: armed_state
                   then:
-                    - logger.log: "*** INFO: Disarmed during entry grace period"
+                    - logger.log:
+                        format: "*** INFO: Disarmed during entry grace period"
+                        level: info                    
                   else:
-                    - button.press: AlarmTriggered
-                    - logger.log: "*** ALERT: Alarm Tripped - MAGNET01 - user did NOT disable during grace period"
-          
+                    - script.execute: alarm_triggered
+                    - logger.log:
+                        format: "*** ALERT: Alarm Tripped - MAGNET01 - user did NOT disable during grace period"
+                        level: info     
 
   - platform: gpio
     id: MAGNET02
     name: "MAGNET 02"
     device_class: door
     pin:  
-        number: GPIO33
+        number: $magnet02_pin
         mode:
             input: true
             pullup: true
@@ -441,15 +492,17 @@ binary_sensor:
             condition:
                switch.is_on: armed_state
             then:
-              - button.press: AlarmTriggered
-              - logger.log: "*** ALERT: Alarm Tripped - MAGNET02"
+              - script.execute: alarm_triggered
+              - logger.log:
+                  format: "*** ALERT: Alarm Tripped - MAGNET02"
+                  level: info              
 
   - platform: gpio
     id: MAGNET03
     name: "MAGNET 03"
     device_class: door
     pin:  
-        number: GPIO25
+        number: $magnet03_pin
         mode:
             input: true
             pullup: true
@@ -460,7 +513,7 @@ binary_sensor:
             condition:
                switch.is_on: armed_state
             then:
-              - button.press: AlarmTriggered
+              - script.execute: alarm_triggered             
               - logger.log: "*** ALERT: Alarm Tripped - MAGNET03"
 
   - platform: gpio
@@ -468,7 +521,7 @@ binary_sensor:
     name: "MAGNET 04"
     device_class: door
     pin:  
-        number: GPIO26
+        number: $magnet04_pin
         mode:
             input: true
             pullup: true
@@ -479,47 +532,55 @@ binary_sensor:
             condition:
                switch.is_on: armed_state
             then:
-              - button.press: AlarmTriggered
+              - script.execute: alarm_triggered
               - logger.log: "*** ALERT: Alarm Tripped - MAGNET04"
 
 ################################### NFC Tags ###################################
 
   - platform: rdm6300
     uid: !secret red_nfc_tag
+
     name: "NFC tag: RED"
+    id: red
     device_class: presence
     filters: # the NFC reader sends a lot of activation traffic, this debounces it a single activation
-      - delayed_off: 200ms
+      - delayed_off: 500ms
     on_press:
-      then:
-        - button.press: rfid_detected
+      then:  
+        # - text_sensor.template.publish:
+        #     id: po_message
+        #     state: "INFO: RED tag presented..."
+        # - script.execute: pushover_message
+        - script.execute: rfid_detected
 
   - platform: rdm6300
     uid: !secret blue_nfc_tag
     name: "NFC tag: BLUE"
+    id: blue
     device_class: presence
     filters: # the NFC reader sends a lot of activation traffic, this debounces it a single activation
-      - delayed_off: 200ms
+      - delayed_off: 500ms
     on_press:
-      then:
-        - button.press: rfid_detected
+      then:  
+        - script.execute: rfid_detected
 
   - platform: rdm6300
     uid: !secret green_nfc_tag
     name: "NFC tag: GREEN"
+    id: green
     device_class: presence
     filters: # the NFC reader sends a lot of activation traffic, this debounces it a single activation
-      - delayed_off: 200ms
+      - delayed_off: 500ms
     on_press:
-      then:
-        - button.press: rfid_detected
+      then:  
+        - script.execute: rfid_detected
 ````
 
 # Available GPIO pins and more sensors
 
 ![ESP32 Wroom Pinout](/esp32_pinout.jpg)
 
-Initially I planned on adding a multiplexer chip to make more inputs available, but it turns out the standard ESP32Wroom modules have 19 pins that we can use for an alarm system, 15 pins for general IO and 4 more pins that are input only - which is perfect for my needs. 
+Initially I planned on adding a multiplexer chip to make more inputs available, but it turns out the standard ESP32Wroom modules have 19 pins that we can use for an alarm system, 15 pins for general IO and 4 more pins that are input only - ideal for sensors. 
 
 I need a maximum of 4 PIRs and 4 Door sensors, so I've assigned my pins like this:
 
@@ -536,16 +597,11 @@ If you need more GPIOs then a PCF8574 IO Expansion Board would be a good choice 
 # FAQ
 
 #### Q: Why didn't you add a keypad?
-A: I chose RFID fobs as they allow me to track the alarm users - the logs show me who activated / deactivated the alarm and when. You also have the web interface or Home Assistant if you need to arm/disarm the alarm remotely. It's totally possible to add keypads if you need them.
-
-#### Q: Your code is poorly optimized and verbose
-A: Damn right! 😃 It's easy to maintain for a small number of sensors and RFID fobs but it would help to optimize it for larger installations. Feel free to submit a change request if you do this.
+A: I chose RFID tags as they allow me to track the alarm users - the logs show me who activated / deactivated the alarm and when. You also have the web interface or Home Assistant if you need to arm/disarm the alarm remotely. It's totally possible to add keypads if you need them.
 
 #### Q: The ESPhome log complains about "components taking a long time"
-A: You can ignore this, the "long time" is the debouncing delay for the RFID reader, the PIR sensors and the website interface updates, all build in ESPhome features.
+A: You can ignore this, the "long time" is the debouncing delay for the RFID reader, the PIR sensors and the website interface updates, all built in ESPhome features.
 
 #### Q: Do I have to recompile and update the ESPhome code in order to revoke or add a new RFID tag?
 
-A: Yes! I'm deploying 4 of these alarm systems and I have 2 kids that will 100% lose their key fobs at least once every 3 months, this means I have to edit the code for 4 alarms and update it.
-
-I'm not sure what would be a good solution for this. I did consider checking a remote database for RFID authentication but that breaks the 'self contained' nature of the alarm system. I need it to work reliably when there is no WiFi / Internet connection. If you have an idea, open and issue so that we can discuss it!
+A: Yes. I can't think of a good solution to avoid this, but the code is easy to manage so it only takes a minute to update.
