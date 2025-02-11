@@ -3,7 +3,7 @@ Inexpensive self contained alarm system based on Esphome with optional Home Assi
 
 I'm very open to critique and feedback to improve all aspects of this project, let's talk!
 
-![Esphome webserver](/esphome-webserver-screenshot.png)
+![Esphome webserver](/esphome-webserver-screenshot2.png)
 
 # Background
 I live in a property with 4 separate buildings that I would like to protect and and monitor, a house, two barns and a static caravan.
